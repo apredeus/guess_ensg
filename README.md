@@ -27,7 +27,7 @@ The plain-text, tab-separated output will be written to *STDOUT*; it will contai
 | LINC00115 | ENSG00000225880 | NONE | Unique | LINC00115 |
 | RNU11 | NONE | ENSG00000270103,ENSG00000274978 | Multi | NONE |
 | SCARNA2 | NONE | ENSG00000278249,ENSG00000270066 | Multi | NONE |
-```
+
 First column contains original symbol; second, reliably inferred Ensembl ID; third, other Ensembl IDs associated with this symbol; fifth, the gene symbol updated according to *Gencode v38* (or other reference of your choosing). 
 
 Fourth column contains a category to which the gene symbol belongs: 
