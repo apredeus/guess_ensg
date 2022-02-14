@@ -19,13 +19,14 @@ About 2-4 Gb RAM is needed. Sorry, the script was not optimized in any meaningfu
 
 The plain-text, tab-separated output will be written to *STDOUT*; it will contain 5 columns: 
 
-```
-AP006222.2      NONE    ENSG00000286448,ENSG00000228463 Unresolved      NONE
-RP4-669L17.10   ENSG00000237094 NONE    Unique  RP4-669L17.4
-RP11-206L10.9   ENSG00000237491 NONE    Unique  LINC01409
-LINC00115       ENSG00000225880 NONE    Unique  LINC00115
-RNU11   NONE    ENSG00000270103,ENSG00000274978 Multi   NONE
-SCARNA2 NONE    ENSG00000278249,ENSG00000270066 Multi   NONE
+| Original symbol | Reliable ENSG | Other ENSG | Category | New symbol | 
+|:-:|:-:|:-:|:-:|:-:|
+| AP006222.2 | NONE | ENSG00000286448,ENSG00000228463 | Unresolved | NONE |
+| RP4-669L17.10 | ENSG00000237094 | NONE | Unique | RP4-669L17.4 |
+| RP11-206L10.9 | ENSG00000237491 | NONE | Unique | LINC01409 |
+| LINC00115 | ENSG00000225880 | NONE | Unique | LINC00115 |
+| RNU11 | NONE | ENSG00000270103,ENSG00000274978 | Multi | NONE |
+| SCARNA2 | NONE | ENSG00000278249,ENSG00000270066 | Multi | NONE |
 ```
 First column contains original symbol; second, reliably inferred Ensembl ID; third, other Ensembl IDs associated with this symbol; fifth, the gene symbol updated according to *Gencode v38* (or other reference of your choosing). 
 
@@ -38,10 +39,10 @@ Fourth column contains a category to which the gene symbol belongs:
   - **Unique** - uniqly matching one and only one ENSG; 
   - **Updated** - gene name exists in the newest Ref, but associated ENSG has changed, and previous ENSGs are retired; 
   - **Renamed** - gene name does not exist in the newest Ref, but associated ENSG is present in one copy in the newest Ref; 
-  - **Ensembl** - gene name is actually and Ensembl ID. 
+  - **Ensembl** - gene name is actually an Ensembl ID. 
 
 Of these, first four lead to gene "loss" (no reliable ENSG could be inferred), while last four give you a reliable guess as to what ENSG matches your gene symbol best. 
 
 ## Author 
 
-Alexander V Predeus, Wellcome Sanger Institute 
+Alexander V. Predeus, Wellcome Sanger Institute, 2022 
