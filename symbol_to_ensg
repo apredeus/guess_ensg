@@ -1,0 +1,127 @@
+#!/usr/bin/env perl 
+#
+# a script to guess human/mouse Ensembl gene ID from gene symbol
+# using a compendium of references and a list of symbols of interest, it classifies each gene symbol into 7 categories:  
+# 1) unknown - never seen in any of the references;
+# 2) unique - uniqly matching one and only one ENSG; 
+# 3) multi - gene name matching multiple ENSG entities in the most updated Gencode/Ensembl reference; 
+# 4) updated - gene name exists in the newest Ref, but associated ENSG has changed, and previous ENSGs are retired; 
+# 5) renamed - gene name does not exist in the newest Ref, but associated ENSG is present in one copy in the newest Ref; 
+# 6) removed - gene name does not exist in the newest Ref, and associated ENSG are absent in the newest Ref; 
+# 7) unresolved - gene name does not exist in the newest Ref, and multiple associated ENSGs are present in the newest Ref. 
+
+use strict; 
+use warnings; 
+use Data::Dumper; 
+use List::MoreUtils qw(uniq);
+
+if ($#ARGV < 2) { 
+  die "USAGE: ./symbol_to_ensg <symbol_list> <ref_compendium> <new_ref_id>\n"; 
+}
+
+my $orig_symbols = shift @ARGV; 
+my $ref_combo = shift @ARGV;
+my $new_ref_id = shift @ARGV; 
+
+open SYMB,"<",$orig_symbols or die "$!"; 
+open REF,"<",$ref_combo or die "$!"; 
+
+my $Ref = {}; ## master reference hash, Name -> ENSG (array, since once name can match many ENSGs)
+my $New = {}; ## new reference hash; ENSG -> Name (scalar, since ENSGs are always 1 per ref)
+
+my $seen_new_ref = 0; 
+while (<REF>) { 
+  chomp; 
+  my @t = split /\t/; 
+  push @{ $Ref->{$t[2]}->{$t[1]} },$t[0]; ## nobody! expects the Spanish Inquisition!
+  if ($t[2] eq $new_ref_id) { 
+    $New->{$t[0]} = $t[1];
+    $seen_new_ref = 1;  
+  } 
+}
+
+die "ERROR: New reference ID you've specified ($new_ref_id) appears to be absent from the reference compendium $ref_combo!\n" if ($seen_new_ref == 0); 
+
+#print Dumper $Ref; 
+
+my @rv = keys %{$Ref}; ## array of reference versions
+
+while (<SYMB>) { 
+  my @all_ensg;          ## matched ENSGs
+  my @new_ensg;          ## matched ENSGs from recent Ref (Gencode_v38)
+  chomp; 
+  #die "ERROR: your gene symbol list contains whitespace or a tab; this should never happen - please check your file!" if (m/\s/);
+  my $symb = $_; 
+
+  ## find all matching ENSGs in all references and in the latest reference of choice (Gencode v38): 
+  foreach my $rv (@rv) { 
+    if ($rv eq $new_ref_id) { 
+      push @all_ensg,@{ $Ref->{$rv}->{$symb} } if (defined $Ref->{$rv}->{$symb}); 
+      push @new_ensg,@{ $Ref->{$rv}->{$symb} } if (defined $Ref->{$rv}->{$symb});
+    } else { 
+      push @all_ensg,@{ $Ref->{$rv}->{$symb} } if (defined $Ref->{$rv}->{$symb}); 
+    }  
+  }
+  
+  ## we only care about unique matches of course 
+  my @uniq_all_ensg = uniq @all_ensg; 
+  my @uniq_new_ensg = uniq @new_ensg;
+  
+  my $class;
+  my $ensg_primary = "NONE"; 
+  my $ensg_secondary = "NONE"; 
+  my $new_symb = "NONE"; 
+  
+  ## classify the symbol based on the results
+  if (scalar @uniq_all_ensg == 0 ) {
+    $class = "Unknown"; 
+  } elsif (scalar @uniq_all_ensg == 1 ) { 
+    $class = "Unique";
+    $ensg_primary = $uniq_all_ensg[0]; 
+  } else {
+    ## all following choices are realized when more than 1 ENSG matches the given symbol 
+    if (scalar @uniq_new_ensg == 0) {
+      ## let's check if any of the old ENSGs are present in the new ref
+      my @old_new_ensg; 
+      foreach my $old_ensg (@uniq_all_ensg) { 
+        ## if matched ENSG is present in new Ref under another name, add it to array
+        push @old_new_ensg,$old_ensg if (defined $New->{$old_ensg}); 
+      } 
+      if (scalar @old_new_ensg == 0) { 
+        ## both ENSG associated with symbol and symbol itself are gone 
+        $class = "Removed"; 
+        $ensg_secondary = join ',',@uniq_all_ensg; 
+      } elsif (scalar @old_new_ensg == 1) { 
+        ## ENSG that was known by this name is now known by another; old symbol is gone
+        $class = "Renamed";
+        $ensg_primary = $old_new_ensg[0]; 
+      } else { 
+        ## multiple old ENSGs are present in new ref and called something else; too much complexity for anything useful
+        $class = "Unresolved";
+        $ensg_secondary = join ',',@old_new_ensg; 
+      }
+    } elsif (scalar @uniq_new_ensg == 1) { 
+      $class = "Updated";
+      $ensg_primary = $uniq_new_ensg[0]; 
+    } else { 
+      $class = "Multi"; 
+      $ensg_secondary = join ',',@uniq_new_ensg; 
+    } 
+  }
+  
+  ## also, sometimes there are ENSGs among the symbols
+  if ($symb =~ m/^ENSG/) {
+    $symb =~ s/\.\d+//;  ## in case there's version 
+    $ensg_primary = $symb; 
+    $class = "Ensembl"; 
+  }
+ 
+  ## new symbol if defined in the new reference 
+  $new_symb = $New->{$ensg_primary} if (defined $New->{$ensg_primary}); 
+  
+  ## finally, output the results
+  print "$symb\t$ensg_primary\t$ensg_secondary\t$class\t$new_symb\n";  
+} 
+
+close REF; 
+close SYMB; 
