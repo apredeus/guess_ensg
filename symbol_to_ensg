@@ -12,8 +12,6 @@
 
 use strict; 
 use warnings; 
-use Data::Dumper; 
-use List::MoreUtils qw(uniq);
 
 if ($#ARGV < 2) { 
   die "USAGE: ./symbol_to_ensg <symbol_list> <ref_compendium> <new_ref_id>\n"; 
@@ -64,8 +62,8 @@ while (<SYMB>) {
   }
   
   ## we only care about unique matches of course 
-  my @uniq_all_ensg = uniq @all_ensg; 
-  my @uniq_new_ensg = uniq @new_ensg;
+  my @uniq_all_ensg = uniq(@all_ensg); 
+  my @uniq_new_ensg = uniq(@new_ensg);
   
   my $class;
   my $ensg_primary = "NONE"; 
@@ -125,3 +123,9 @@ while (<SYMB>) {
 
 close REF; 
 close SYMB; 
+
+## CPAN is getting worse every year, let's stay self-consistent
+sub uniq {
+  my %seen;
+  return grep { !$seen{$_}++ } @_;
+}
